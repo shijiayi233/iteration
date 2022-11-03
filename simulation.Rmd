@@ -1,0 +1,137 @@
+---
+title: "simulation"
+author: "Jiayi Shi"
+date: "2022-11-03"
+output: html_document
+---
+multiple line: alt+shift
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+
+set.seed(1)
+```
+
+## Simulation
+
+Repeat: generate data, draw a sample, analysis data, return object.
+
+```{r}
+sim_mean_sd = function(n, mu = 2, sigma = 3) {
+  
+  x = rnorm(n, mean = mu, sd = sigma)
+  
+  tibble(
+      mu_hat = mean(x),
+      sigma_hat = sd(x)
+    )
+}
+```
+
+```{r}
+output = vector("list", length = 100)
+
+for (i in 1:100){
+  output[[i]] = sim_mean_sd(n = 30)
+}
+
+bind_rows(output) %>% view
+```
+
+## use list columns
+
+```{r}
+sim_results_df = 
+  expand_grid(
+    sample_size = 30,
+    iteration = 1:100
+  ) %>% #expand_grid(...): A tibble with one column for each input in ... The output will have one row for each combination of the inputs, i.e. the size be equal to the product of the sizes of the inputs. 
+  mutate(estimate_df = map(sample_size, sim_mean_sd)) %>% 
+  unnest(estimate_df)
+```
+
+plot:
+
+```{r}
+sim_results_df %>% 
+  ggplot(aes(x = mu_hat)) +
+  geom_density()
+```
+
+```{r}
+sim_results_df %>% 
+  ggplot(aes(x = mu_hat, y = sigma_hat)) +
+  geom_violin()
+```
+
+## change the sample size
+
+```{r}
+sim_results_df = 
+  expand_grid(
+    sample_size = c(30,60,120,240),
+    iteration = 1:100
+  ) %>% 
+  mutate(estimate_df = map(sample_size, sim_mean_sd)) %>% 
+  unnest(estimate_df)
+```
+
+```{r}
+sim_results_df %>% 
+  mutate(sample_size = str_c("N = ", sample_size),
+         sample_size = fct_inorder(sample_size)) %>% #fct_inorder()
+  ggplot(aes(x = sample_size, y = mu_hat))+
+  geom_violin(aes(fill = sample_size))
+```
+
+```{r}
+sim_results_df %>% 
+  mutate(sample_size = str_c("N = ", sample_size),
+         sample_size = fct_inorder(sample_size)) %>% # fct_inorder: order as originally defined, otherwisw order in alphabate
+  group_by(sample_size) %>% 
+  summarise(emp_st_err = sd(mu_hat))
+```
+
+```{r}
+sim_results_df %>% 
+  pivot_longer(
+    mu_hat:sigma_hat,
+    names_to = "parameter",
+    values_to = "estimate"
+  ) %>% 
+  group_by(sample_size) %>% 
+  summarize(
+    emp_mean = mean(estimate),
+    emp_var = var(estimate)) %>% 
+  knitr::kable(digits = 3)
+  
+```
+
+```{r}
+sim_results_df = 
+  expand_grid(
+    sample_size = c(30,60,120,240),
+    true_sigma = c(6,3),
+    iteration = 1:1000
+  ) %>% 
+  mutate(estimate_df = 
+           map2(.x = sample_size, .y = true_sigma, ~sim_mean_sd(n = .x, sigma = .y))) %>% # specify clearly for 2 arguments
+  unnest(estimate_df)
+```
+

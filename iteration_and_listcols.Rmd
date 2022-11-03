@@ -130,7 +130,7 @@ output
 
 * when your function has two arguments: map2_*
 ```{r}
-output = map2(.x = input_1, .y = input_2, ~func(arg_1 = .x, arg_2 = .y))
+#output = map2(.x = input_1, .y = input_2, ~func(arg_1 = .x, arg_2 = .y))
 ```
 
 ## list, dataframe
